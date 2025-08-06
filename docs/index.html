@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Цитата дня</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #fff;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      padding: 2em;
+    }
+    .quote {
+      max-width: 800px;
+      font-size: 1.3em;
+      line-height: 1.6;
+    }
+    .source {
+      margin-top: 1.5em;
+      font-style: italic;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="quote">Загрузка...</div>
+  <script>
+    const repo = "sushchikh/books";
+    const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
+
+    async function getRandomQuote() {
+      const quoteEl = document.querySelector('.quote');
+      try {
+        const res = await fetch(apiUrl);
+        const files = await res.json();
+        const mdFiles = files.filter(f => f.name.endsWith(".md"));
+        const randomFile = mdFiles[Math.floor(Math.random() * mdFiles.length)];
+        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${randomFile.name}`;
+        const rawRes = await fetch(rawUrl);
+        const content = await rawRes.text();
+
+        const quotes = content
+          .split(/\n{2,}/)           // Разделение по двум и более пустым строкам
+          .map(q => q.trim())
+          .filter(q => q.length >= 10);
+
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        quoteEl.innerHTML = `
+          ${randomQuote.replace(/\n/g, "<br>")}
+          <div class="source">— ${randomFile.name.replace(".md", "").replace(/_/g, " ")}</div>
+        `;
+      } catch (e) {
+        quoteEl.textContent = "Не удалось загрузить цитату 😢";
+        console.error(e);
+      }
+    }
+
+    getRandomQuote();
+  </script>
+</body>
+</html>
