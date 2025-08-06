@@ -22,12 +22,12 @@
       width: 100%;
       padding: 2em;
       box-sizing: border-box;
-      text-align: left;
     }
 
     .quote {
       font-size: 1.3em;
       line-height: 1.6;
+      text-align: left;
       opacity: 1;
       transition: opacity 0.6s ease;
     }
@@ -40,16 +40,15 @@
       margin-top: 1.5em;
       font-style: italic;
       color: #777;
+      text-align: left;
     }
 
-    .all-button {
-      display: inline-block;
+    .all-quotes-button {
       margin-top: 2em;
+      background: #eee;
       padding: 0.5em 1em;
       font-size: 1em;
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      border: none;
       cursor: pointer;
     }
 
@@ -65,20 +64,13 @@
       .source {
         font-size: 0.95em;
       }
-
-      .all-button {
-        width: 100%;
-        font-size: 1.1em;
-      }
     }
   </style>
 </head>
 <body ondblclick="handleDoubleTap()">
   <div class="container">
     <div class="quote">Загрузка...</div>
-    <div class="button-container">
-      <button class="all-button" onclick="showAllQuotes()" style="display: none;">все цитаты из этой книги</button>
-    </div>
+    <button class="all-quotes-button" onclick="showAllQuotes()">все цитаты из этой книги</button>
   </div>
 
   <script>
@@ -87,7 +79,7 @@
     const STORAGE_KEY = "shownQuotes";
     const MAX_QUOTES = 100;
 
-    let currentFile = null;
+    let currentBookFile = ""; // сохраняем имя файла
 
     function getStoredQuotes() {
       try {
@@ -111,11 +103,33 @@
       return quotes.includes(quote);
     }
 
+    function splitIntoQuotes(text) {
+      const lines = text.split('\n');
+      const quotes = [];
+      let current = [];
+
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === "") {
+          if (current.length > 0) {
+            quotes.push(current.join(' ').trim());
+            current = [];
+          }
+        } else {
+          current.push(trimmed);
+        }
+      }
+
+      if (current.length > 0) {
+        quotes.push(current.join(' ').trim());
+      }
+
+      return quotes;
+    }
+
     async function getRandomQuote() {
       const quoteEl = document.querySelector('.quote');
-      const buttonEl = document.querySelector('.all-button');
       quoteEl.classList.add("fade-out");
-      buttonEl.style.display = "none";
 
       try {
         const res = await fetch(apiUrl);
@@ -126,12 +140,7 @@
         const rawRes = await fetch(rawUrl);
         const content = await rawRes.text();
 
-        const quotes = content
-          .split(/\n{2,}/)
-          .map(q => q.trim())
-          .filter(q => q.length >= 10);
-
-        currentFile = randomFile.name;
+        const quotes = splitIntoQuotes(content).filter(q => q.length >= 10);
 
         let uniqueQuote = null;
         const maxTries = 20;
@@ -144,20 +153,19 @@
         }
 
         const finalQuote = uniqueQuote || quotes[Math.floor(Math.random() * quotes.length)];
-
+        const source = randomFile.replace(".md", "").replace(/_/g, " ");
         const quoteHTML = `
           ${finalQuote.replace(/\n/g, "<br>")}
-          <div class="source">— ${currentFile.replace(".md", "").replace(/_/g, " ")}</div>
+          <div class="source">— ${source}</div>
         `;
 
         setTimeout(() => {
           quoteEl.innerHTML = quoteHTML;
           quoteEl.classList.remove("fade-out");
-          buttonEl.style.display = "inline-block";
         }, 600);
 
         storeQuote(finalQuote);
-
+        currentBookFile = randomFile;
       } catch (e) {
         quoteEl.textContent = "Не удалось загрузить цитату 😢";
         quoteEl.classList.remove("fade-out");
@@ -166,34 +174,22 @@
     }
 
     async function showAllQuotes() {
-      const quoteEl = document.querySelector('.quote');
-      const buttonEl = document.querySelector('.all-button');
-      quoteEl.classList.add("fade-out");
-      buttonEl.style.display = "none";
+      if (!currentBookFile) return;
 
       try {
-        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${currentFile}`;
+        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${currentBookFile}`;
         const rawRes = await fetch(rawUrl);
         const content = await rawRes.text();
 
-        const allQuotes = content
-          .split(/\n{2,}/)
-          .map(q => q.trim())
-          .filter(q => q.length >= 10);
+        const quotes = splitIntoQuotes(content).filter(q => q.length >= 10);
+        const source = currentBookFile.replace(".md", "").replace(/_/g, " ");
 
-        const allHTML = allQuotes.map(q => `<p>${q.replace(/\n/g, "<br>")}</p>`).join("<hr>");
+        const allHTML = quotes.map(q => `<p>${q}</p>`).join('\n') + `<div class="source">— ${source}</div>`;
 
-        setTimeout(() => {
-          quoteEl.innerHTML = `
-            ${allHTML}
-            <div class="source">— ${currentFile.replace(".md", "").replace(/_/g, " ")}</div>
-          `;
-          quoteEl.classList.remove("fade-out");
-        }, 600);
+        const quoteEl = document.querySelector('.quote');
+        quoteEl.innerHTML = allHTML;
       } catch (e) {
-        quoteEl.textContent = "Не удалось загрузить все цитаты 😢";
-        quoteEl.classList.remove("fade-out");
-        console.error(e);
+        console.error("Ошибка загрузки всех цитат", e);
       }
     }
 
