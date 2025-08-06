@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Цитата дня</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- ✅ адаптация под мобилки -->
   <style>
     body {
       font-family: sans-serif;
@@ -15,23 +16,42 @@
       margin: 0;
       padding: 0;
     }
+
     .container {
       max-width: 800px;
       width: 100%;
       padding: 2em;
       box-sizing: border-box;
     }
+
     .quote {
       font-size: 1.3em;
       line-height: 1.6;
-      text-align: left; /* теперь выравнивание по левому краю */
+      text-align: left;
     }
+
     .source {
       margin-top: 1.5em;
       font-style: italic;
       color: #777;
       text-align: left;
     }
+
+    /* ✅ Мобильная адаптация */
+    @media (max-width: 600px) {
+      .container {
+        padding: 1em;
+      }
+
+      .quote {
+        font-size: 1.2em;
+      }
+
+      .source {
+        font-size: 0.95em;
+      }
+    }
+
   </style>
 </head>
 <body>
