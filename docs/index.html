@@ -12,23 +12,33 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
       padding: 2em;
+      box-sizing: border-box;
     }
     .quote {
-      max-width: 800px;
       font-size: 1.3em;
       line-height: 1.6;
+      text-align: left; /* теперь выравнивание по левому краю */
     }
     .source {
       margin-top: 1.5em;
       font-style: italic;
       color: #777;
+      text-align: left;
     }
   </style>
 </head>
 <body>
-  <div class="quote">Загрузка...</div>
+  <div class="container">
+    <div class="quote">Загрузка...</div>
+  </div>
+
   <script>
     const repo = "sushchikh/books";
     const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
@@ -45,7 +55,7 @@
         const content = await rawRes.text();
 
         const quotes = content
-          .split(/\n{2,}/)           // Разделение по двум и более пустым строкам
+          .split(/\n{2,}/)
           .map(q => q.trim())
           .filter(q => q.length >= 10);
 
