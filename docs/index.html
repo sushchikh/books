@@ -43,12 +43,13 @@
       text-align: left;
     }
 
-    .all-quotes-button {
-      margin-top: 2em;
-      background: #eee;
+    .all-btn {
+      display: inline-block;
+      margin-top: 1.5em;
       padding: 0.5em 1em;
-      font-size: 1em;
-      border: none;
+      font-size: 0.9em;
+      border: 1px solid #ccc;
+      background: #f8f8f8;
       cursor: pointer;
     }
 
@@ -70,16 +71,23 @@
 <body ondblclick="handleDoubleTap()">
   <div class="container">
     <div class="quote">Загрузка...</div>
-    <button class="all-quotes-button" onclick="showAllQuotes()">все цитаты из этой книги</button>
+    <div class="source"></div>
+    <button class="all-btn" onclick="showAllQuotes()" style="display:none">все цитаты из этой книги</button>
   </div>
 
   <script>
     const repo = "sushchikh/books";
-    const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
+    const mdFiles = [
+      "Стивен_Кови — «Семь навыков высокоэффективнх людей».md",
+      "Чарльз_Дахигг — «Сила привычки».md",
+      "Фрейд — «Толкование сновидений».md",
+      // сюда добавляй остальные .md-файлы
+    ];
+
     const STORAGE_KEY = "shownQuotes";
     const MAX_QUOTES = 100;
-
-    let currentBookFile = ""; // сохраняем имя файла
+    let currentBook = "";
+    let currentQuotes = [];
 
     function getStoredQuotes() {
       try {
@@ -103,98 +111,70 @@
       return quotes.includes(quote);
     }
 
-    function splitIntoQuotes(text) {
-      const lines = text.split('\n');
-      const quotes = [];
-      let current = [];
-
-      for (let line of lines) {
-        const trimmed = line.trim();
-        if (trimmed === "") {
-          if (current.length > 0) {
-            quotes.push(current.join(' ').trim());
-            current = [];
-          }
-        } else {
-          current.push(trimmed);
-        }
-      }
-
-      if (current.length > 0) {
-        quotes.push(current.join(' ').trim());
-      }
-
-      return quotes;
-    }
-
     async function getRandomQuote() {
       const quoteEl = document.querySelector('.quote');
+      const sourceEl = document.querySelector('.source');
+      const btn = document.querySelector('.all-btn');
       quoteEl.classList.add("fade-out");
+      sourceEl.textContent = "";
+      btn.style.display = "none";
 
       try {
-        const res = await fetch(apiUrl);
-        const files = await res.json();
-        const mdFiles = files.filter(f => f.name.endsWith(".md"));
         const randomFile = mdFiles[Math.floor(Math.random() * mdFiles.length)];
-        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${randomFile.name}`;
-        const rawRes = await fetch(rawUrl);
-        const content = await rawRes.text();
+        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${randomFile}`;
+        const res = await fetch(rawUrl);
+        const content = await res.text();
 
-        const quotes = splitIntoQuotes(content).filter(q => q.length >= 10);
+        currentBook = randomFile;
+        currentQuotes = content
+          .split(/\n{2,}/)
+          .map(q => q.trim())
+          .filter(q => q.length >= 10);
 
         let uniqueQuote = null;
         const maxTries = 20;
         for (let i = 0; i < maxTries; i++) {
-          const candidate = quotes[Math.floor(Math.random() * quotes.length)];
+          const candidate = currentQuotes[Math.floor(Math.random() * currentQuotes.length)];
           if (!isQuoteAlreadyShown(candidate)) {
             uniqueQuote = candidate;
             break;
           }
         }
 
-        const finalQuote = uniqueQuote || quotes[Math.floor(Math.random() * quotes.length)];
-        const source = randomFile.replace(".md", "").replace(/_/g, " ");
-        const quoteHTML = `
-          ${finalQuote.replace(/\n/g, "<br>")}
-          <div class="source">— ${source}</div>
-        `;
+        const finalQuote = uniqueQuote || currentQuotes[Math.floor(Math.random() * currentQuotes.length)];
+        storeQuote(finalQuote);
 
         setTimeout(() => {
-          quoteEl.innerHTML = quoteHTML;
+          quoteEl.innerHTML = finalQuote.replace(/\n/g, "<br>");
+          sourceEl.textContent = `— ${randomFile.replace(".md", "").replace(/_/g, " ")}`;
           quoteEl.classList.remove("fade-out");
+          btn.style.display = "inline-block";
         }, 600);
 
-        storeQuote(finalQuote);
-        currentBookFile = randomFile;
       } catch (e) {
-        quoteEl.textContent = "Не удалось загрузить цитату 😢";
+        document.querySelector('.quote').textContent = "Не удалось загрузить цитату 😢";
         quoteEl.classList.remove("fade-out");
         console.error(e);
       }
     }
 
-    async function showAllQuotes() {
-      if (!currentBookFile) return;
-
-      try {
-        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${currentBookFile}`;
-        const rawRes = await fetch(rawUrl);
-        const content = await rawRes.text();
-
-        const quotes = splitIntoQuotes(content).filter(q => q.length >= 10);
-        const source = currentBookFile.replace(".md", "").replace(/_/g, " ");
-
-        const allHTML = quotes.map(q => `<p>${q}</p>`).join('\n') + `<div class="source">— ${source}</div>`;
-
-        const quoteEl = document.querySelector('.quote');
-        quoteEl.innerHTML = allHTML;
-      } catch (e) {
-        console.error("Ошибка загрузки всех цитат", e);
-      }
-    }
-
     function handleDoubleTap() {
       getRandomQuote();
+    }
+
+    function showAllQuotes() {
+      const quoteEl = document.querySelector('.quote');
+      const btn = document.querySelector('.all-btn');
+      const sourceEl = document.querySelector('.source');
+
+      quoteEl.classList.add("fade-out");
+      btn.style.display = "none";
+
+      setTimeout(() => {
+        quoteEl.innerHTML = currentQuotes.map(q => `<p>${q.replace(/\n/g, "<br>")}</p>`).join("");
+        quoteEl.classList.remove("fade-out");
+        sourceEl.textContent = `— ${currentBook.replace(".md", "").replace(/_/g, " ")}`;
+      }, 600);
     }
 
     getRandomQuote();
