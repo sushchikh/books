@@ -88,7 +88,6 @@
     const MAX_QUOTES = 100;
 
     let currentFile = null;
-    let currentQuotes = [];
 
     function getStoredQuotes() {
       try {
@@ -133,9 +132,7 @@
           .filter(q => q.length >= 10);
 
         currentFile = randomFile.name;
-        currentQuotes = quotes;
 
-        // Находим уникальную цитату
         let uniqueQuote = null;
         const maxTries = 20;
         for (let i = 0; i < maxTries; i++) {
@@ -160,6 +157,7 @@
         }, 600);
 
         storeQuote(finalQuote);
+
       } catch (e) {
         quoteEl.textContent = "Не удалось загрузить цитату 😢";
         quoteEl.classList.remove("fade-out");
@@ -167,20 +165,36 @@
       }
     }
 
-    function showAllQuotes() {
+    async function showAllQuotes() {
       const quoteEl = document.querySelector('.quote');
       const buttonEl = document.querySelector('.all-button');
       quoteEl.classList.add("fade-out");
       buttonEl.style.display = "none";
 
-      setTimeout(() => {
-        const allHTML = currentQuotes.map(q => `<p>${q.replace(/\n/g, "<br>")}</p>`).join("<hr>");
-        quoteEl.innerHTML = `
-          ${allHTML}
-          <div class="source">— ${currentFile.replace(".md", "").replace(/_/g, " ")}</div>
-        `;
+      try {
+        const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${currentFile}`;
+        const rawRes = await fetch(rawUrl);
+        const content = await rawRes.text();
+
+        const allQuotes = content
+          .split(/\n{2,}/)
+          .map(q => q.trim())
+          .filter(q => q.length >= 10);
+
+        const allHTML = allQuotes.map(q => `<p>${q.replace(/\n/g, "<br>")}</p>`).join("<hr>");
+
+        setTimeout(() => {
+          quoteEl.innerHTML = `
+            ${allHTML}
+            <div class="source">— ${currentFile.replace(".md", "").replace(/_/g, " ")}</div>
+          `;
+          quoteEl.classList.remove("fade-out");
+        }, 600);
+      } catch (e) {
+        quoteEl.textContent = "Не удалось загрузить все цитаты 😢";
         quoteEl.classList.remove("fade-out");
-      }, 600);
+        console.error(e);
+      }
     }
 
     function handleDoubleTap() {
