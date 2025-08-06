@@ -66,11 +66,33 @@
   <script>
     const repo = "sushchikh/books";
     const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
+    const STORAGE_KEY = "shownQuotes";
+    const MAX_QUOTES = 100;
+
+    function getStoredQuotes() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function storeQuote(quote) {
+      let quotes = getStoredQuotes();
+      quotes.push(quote);
+      if (quotes.length > MAX_QUOTES) {
+        quotes = quotes.slice(-MAX_QUOTES); // последние 100
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes));
+    }
+
+    function isQuoteAlreadyShown(quote) {
+      const quotes = getStoredQuotes();
+      return quotes.includes(quote);
+    }
 
     async function getRandomQuote() {
       const quoteEl = document.querySelector('.quote');
-
-      // Плавно скрываем цитату
       quoteEl.classList.add("fade-out");
 
       try {
@@ -87,17 +109,32 @@
           .map(q => q.trim())
           .filter(q => q.length >= 10);
 
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        // Находим уникальную цитату
+        let uniqueQuote = null;
+        const maxTries = 20;
+        for (let i = 0; i < maxTries; i++) {
+          const candidate = quotes[Math.floor(Math.random() * quotes.length)];
+          if (!isQuoteAlreadyShown(candidate)) {
+            uniqueQuote = candidate;
+            break;
+          }
+        }
+
+        // Если не нашли уникальную — показываем любую
+        const finalQuote = uniqueQuote || quotes[Math.floor(Math.random() * quotes.length)];
+
         const quoteHTML = `
-          ${randomQuote.replace(/\n/g, "<br>")}
+          ${finalQuote.replace(/\n/g, "<br>")}
           <div class="source">— ${randomFile.name.replace(".md", "").replace(/_/g, " ")}</div>
         `;
 
-        // Ждём окончания анимации скрытия
         setTimeout(() => {
           quoteEl.innerHTML = quoteHTML;
-          quoteEl.classList.remove("fade-out"); // Появление
+          quoteEl.classList.remove("fade-out");
         }, 600);
+
+        storeQuote(finalQuote); // сохраняем в localStorage
+
       } catch (e) {
         quoteEl.textContent = "Не удалось загрузить цитату 😢";
         quoteEl.classList.remove("fade-out");
