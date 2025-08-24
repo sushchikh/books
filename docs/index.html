@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body {
-      font-family: sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #fff;
       color: #333;
       display: flex;
@@ -43,26 +43,29 @@
     .all-button {
       display: inline-block;
       margin-top: 2em;
-      padding: 0.5em 1em;
-      font-size: 1em;
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      padding: 0.4em 1em;
+      font-size: 0.9em;
+      background: #e0e0e0;
+      border: 1px solid #999;
+      border-radius: 10px;
       cursor: pointer;
+      color: #333;
+      text-align: center;
     }
     @media (max-width: 600px) {
       .container {
         padding: 1.5em;
       }
       .quote {
-        font-size: 1.4em;
+        font-size: 1.2em;
       }
       .source {
         font-size: 1.0em;
       }
       .all-button {
         width: 100%;
-        font-size: 1.2em;
+        font-size: 1.0em;
+        padding: 0.5em 1em;
       }
     }
   </style>
@@ -187,7 +190,6 @@
       getRandomQuote();
     }
 
-    // Обработка double tap для мобильных
     document.body.addEventListener('touchend', (event) => {
       const now = new Date().getTime();
       if (now - lastTap < 300) {
