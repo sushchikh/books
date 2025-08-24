@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Цитата дня</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body {
       font-family: sans-serif;
@@ -11,37 +11,35 @@
       color: #333;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
+      align-items: flex-start;
+      min-height: 100vh;
+      height: auto;
       margin: 0;
       padding: 0;
+      overflow-y: scroll;
     }
-
     .container {
       max-width: 800px;
       width: 100%;
       padding: 2em;
       box-sizing: border-box;
       text-align: left;
+      overflow-y: auto;
     }
-
     .quote {
       font-size: 1.3em;
       line-height: 1.6;
       opacity: 1;
       transition: opacity 0.6s ease;
     }
-
     .quote.fade-out {
       opacity: 0;
     }
-
     .source {
       margin-top: 1.5em;
       font-style: italic;
       color: #777;
     }
-
     .all-button {
       display: inline-block;
       margin-top: 2em;
@@ -52,42 +50,37 @@
       border-radius: 5px;
       cursor: pointer;
     }
-
     @media (max-width: 600px) {
       .container {
-        padding: 1em;
+        padding: 1.5em;
       }
-
       .quote {
-        font-size: 1.2em;
+        font-size: 1.4em;
       }
-
       .source {
-        font-size: 0.95em;
+        font-size: 1.0em;
       }
-
       .all-button {
         width: 100%;
-        font-size: 1.1em;
+        font-size: 1.2em;
       }
     }
   </style>
 </head>
-<body ondblclick="handleDoubleTap()">
+<body>
   <div class="container">
     <div class="quote">Загрузка...</div>
     <div class="button-container">
       <button class="all-button" onclick="showAllQuotes()" style="display: none;">все цитаты из этой книги</button>
     </div>
   </div>
-
   <script>
     const repo = "sushchikh/books";
     const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
     const STORAGE_KEY = "shownQuotes";
     const MAX_QUOTES = 100;
-
     let currentFile = null;
+    let lastTap = 0;
 
     function getStoredQuotes() {
       try {
@@ -116,23 +109,25 @@
       const buttonEl = document.querySelector('.all-button');
       quoteEl.classList.add("fade-out");
       buttonEl.style.display = "none";
-
       try {
         const res = await fetch(apiUrl);
         const files = await res.json();
         const mdFiles = files.filter(f => f.name.endsWith(".md"));
+        if (mdFiles.length === 0) {
+          throw new Error("Нет MD-файлов");
+        }
         const randomFile = mdFiles[Math.floor(Math.random() * mdFiles.length)];
         const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${randomFile.name}`;
         const rawRes = await fetch(rawUrl);
         const content = await rawRes.text();
-
         const quotes = content
           .split(/\n{2,}/)
           .map(q => q.trim())
           .filter(q => q.length >= 10);
-
+        if (quotes.length === 0) {
+          throw new Error("Нет цитат в файле");
+        }
         currentFile = randomFile.name;
-
         let uniqueQuote = null;
         const maxTries = 20;
         for (let i = 0; i < maxTries; i++) {
@@ -142,22 +137,17 @@
             break;
           }
         }
-
         const finalQuote = uniqueQuote || quotes[Math.floor(Math.random() * quotes.length)];
-
         const quoteHTML = `
           ${finalQuote.replace(/\n/g, "<br>")}
           <div class="source">— ${currentFile.replace(".md", "").replace(/_/g, " ")}</div>
         `;
-
         setTimeout(() => {
           quoteEl.innerHTML = quoteHTML;
           quoteEl.classList.remove("fade-out");
           buttonEl.style.display = "inline-block";
         }, 600);
-
         storeQuote(finalQuote);
-
       } catch (e) {
         quoteEl.textContent = "Не удалось загрузить цитату 😢";
         quoteEl.classList.remove("fade-out");
@@ -170,19 +160,15 @@
       const buttonEl = document.querySelector('.all-button');
       quoteEl.classList.add("fade-out");
       buttonEl.style.display = "none";
-
       try {
         const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${currentFile}`;
         const rawRes = await fetch(rawUrl);
         const content = await rawRes.text();
-
         const allQuotes = content
           .split(/\n{2,}/)
           .map(q => q.trim())
           .filter(q => q.length >= 10);
-
         const allHTML = allQuotes.map(q => `<p>${q.replace(/\n/g, "<br>")}</p>`).join("<hr>");
-
         setTimeout(() => {
           quoteEl.innerHTML = `
             ${allHTML}
@@ -200,6 +186,18 @@
     function handleDoubleTap() {
       getRandomQuote();
     }
+
+    // Обработка double tap для мобильных
+    document.body.addEventListener('touchend', (event) => {
+      const now = new Date().getTime();
+      if (now - lastTap < 300) {
+        event.preventDefault();
+        handleDoubleTap();
+      }
+      lastTap = now;
+    });
+
+    document.body.addEventListener('dblclick', handleDoubleTap);
 
     getRandomQuote();
   </script>
